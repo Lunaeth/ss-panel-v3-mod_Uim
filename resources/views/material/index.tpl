@@ -4,6 +4,9 @@
 	html5up.net | @ajlkn
 	Free for personal and commercial use under the CCA 3.0 license (html5up.net/license)
 -->
+{if $config['appName'] == '跑路'}
+<script>window.location.href='{$config["baseUrl"]}/paolu.html';</script>
+{/if}
 <html>
 	<head>
 		<title>{$config["appName"]}</title>
@@ -13,8 +16,8 @@
         <link rel="shortcut icon" href="/favicon.ico"/>
         <link rel="bookmark" href="/favicon.ico"/>
         <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no"/>
-		<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/sspuic/p@0x01/public/assets/css/main.css"/>
-        <noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/sspuic/p@0x01/public/assets/css/noscript.css" /></noscript>   
+		<link rel="stylesheet" href="/assets/css/main.css"/>
+        <noscript><link rel="stylesheet" href="/assets/css/noscript.css" /></noscript>   
   </head>
   
        <body>
@@ -47,6 +50,7 @@
 							<ul>
                                 <li><a href="#1">简介</a></li>
 					            <li><a href="/user">用户中心</a></li>
+								<li><a href="/user/logout">退出登录</a></li>
 								<li><a href="#5">下载</a></li>
                         </ul>
 						</nav>
@@ -66,8 +70,7 @@
                                <li><a href="#1">简介</a></li>
 								<li><a href="/auth/login">登录</a></li>
 								<li><a href="/auth/register">注册</a></li>
-                              	<li><a href="#4">联系</a></li>
-								<li><a href="#5">下载</a></li>
+                              	<li><a href="#5">下载</a></li>
                               
                            </ul>
 						</nav>
@@ -79,7 +82,7 @@
                       <!--标签1开始-->
                       <article id="1">
                       <h2 class="major">简介</h2>
-                      <p>这里是示范文字</p><p> 请到站点文件夹</p><p>resources/views/material/index.tpl</p><p>第79行进行修改</p></article>
+                      <p>「ホワイトアルバムの季節」が、また、やってきた。</p></article>
 					  <!--
 					  简介修改示例: 
 					  <p> 123</p>
@@ -148,16 +151,16 @@
                               </div>
                      <!-- 版权底部 -->
                       <footer id="footer">
-                   <p class="copyright">&copy;2015-2017 {$config["appName"]}</p>
+                   <p class="copyright">&copy;2015-{date("Y")} {$config["appName"]}</p>
                       </footer>
               <!-- 版权结束 -->
 			 </div>
                 <!-- BG -->
 			<div id="bg"></div>
 	        	<!-- Scripts -->
-			<script src="https://cdn.jsdelivr.net/gh/sspuic/p@0x01/public/assets/js/jquery.min.js"></script>
-			<script src="https://cdn.jsdelivr.net/gh/sspuic/p@0x01/public/assets/js/skel.min.js"></script>
-			<script src="https://cdn.jsdelivr.net/gh/sspuic/p@0x01/public/assets/js/util.js"></script>
-         <script src="https://cdn.jsdelivr.net/gh/sspuic/p@0x01/public/assets/js/main.js"></script>
+			<script src="/assets/js/jquery.min.js"></script>
+			<script src="/assets/js/skel.min.js"></script>
+			<script src="/assets/js/util.js"></script>
+         <script src="/assets/js/main.js"></script>
 	</body>
 </html>

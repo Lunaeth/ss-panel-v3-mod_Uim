@@ -14,6 +14,7 @@ use App\Models\Coupon;
 use App\Models\Bought;
 use App\Models\Ticket;
 use App\Services\Config;
+use App\Utils;
 use App\Utils\Hash;
 use App\Utils\Tools;
 use App\Utils\Radius;
@@ -76,6 +77,7 @@ class UserController extends BaseController
         }
 
         $Ann = Ann::orderBy('date', 'desc')->first();
+      
 
 
         return $this->view()->assign("ssr_sub_token", $ssr_sub_token)->assign("router_token", $router_token)
@@ -146,7 +148,7 @@ class UserController extends BaseController
 
         $node_prefix=array();
         $node_method=array();
-        $a=0;
+        $a=0;//命名的什么JB变量
         $node_order=array();
         $node_alive=array();
         $node_prealive=array();
@@ -196,7 +198,7 @@ class UserController extends BaseController
                 }
 
 
-                if ($node->sort==0||$node->sort==7||$node->sort==8||$node->sort==10) {
+                if ($node->sort==0||$node->sort==7||$node->sort==8||$node->sort==10||$node->sort==11) {
                     $node_tempalive=$node->getOnlineUserCount();
                     $node_prealive[$node->id]=$node_tempalive;
                     if ($node->isNodeOnline() !== null) {
@@ -232,10 +234,6 @@ class UserController extends BaseController
                         $node_method[$temp[0]]=$node_method[$temp[0]]." ".$temp[1];
                     }
                 }
-
-
-
-
 
                 array_push($node_prefix[$temp[0]], $node);
             }
@@ -411,9 +409,8 @@ class UserController extends BaseController
     public function codepost($request, $response, $args)
     {
         $code = $request->getParam('code');
+		$code = trim($code);
         $user = $this->user;
-
-
 
         if ($code == "") {
             $res['ret'] = 0;
@@ -545,12 +542,19 @@ class UserController extends BaseController
 
     public function ResetPort($request, $response, $args)
     {
+		$price=Config::get('port_price');
         $user = $this->user;
+		
+		if ($user->money<$price){
+			$res['ret'] = 0;
+            $res['msg'] = "余额不足。";
+            return $response->getBody()->write(json_encode($res));
+		}
 
         $origin_port = $user->port;
 
         $user->port = Tools::getAvPort();
-        $user->save();
+
 
         $relay_rules = Relay::where('user_id', $user->id)->where('port', $origin_port)->get();
         foreach ($relay_rules as $rule) {
@@ -558,9 +562,57 @@ class UserController extends BaseController
             $rule->save();
         }
 
+		$user->money-=$price;
+		$user->save();
 
         $res['ret'] = 1;
-        $res['msg'] = "设置成功，新端口是".$user->port;
+        $res['msg'] = $user->port;
+        return $response->getBody()->write(json_encode($res));
+    }
+
+    public function SpecifyPort($request, $response, $args)
+    {
+		$price=Config::get('port_price_specify');
+        $user = $this->user;
+		
+		if ($user->money<$price){
+			$res['ret'] = 0;
+            $res['msg'] = "余额不足。";
+            return $response->getBody()->write(json_encode($res));
+		}
+
+		$port=$request->getParam('port');
+
+		if ($port<Config::get('min_port')||$port>Config::get('max_port')||Tools::isInt($port)==false){
+			$res['ret'] = 0;
+            $res['msg'] = "端口不在要求范围内。";
+            return $response->getBody()->write(json_encode($res));
+		}
+
+		$port_occupied = User::pluck('port')->toArray();
+
+		if(in_array($port,$port_occupied)==true){
+			$res['ret'] = 0;
+            $res['msg'] = "端口已被占用。";
+            return $response->getBody()->write(json_encode($res));
+		}
+
+        $origin_port = $user->port;
+
+        $user->port = $port;
+
+
+        $relay_rules = Relay::where('user_id', $user->id)->where('port', $origin_port)->get();
+        foreach ($relay_rules as $rule) {
+            $rule->port = $user->port;
+            $rule->save();
+        }
+
+		$user->money-=$price;
+		$user->save();
+
+        $res['ret'] = 1;
+        $res['msg'] = "钦定成功";
         return $response->getBody()->write(json_encode($res));
     }
 
@@ -590,7 +642,7 @@ class UserController extends BaseController
     public function node($request, $response, $args)
     {
         $user = Auth::getUser();
-            $nodes = Node::where('type', 1)->orderBy('name')->get();
+        $nodes = Node::where('type', 1)->orderBy('name')->get();
         $relay_rules = Relay::where('user_id', $this->user->id)->orwhere('user_id', 0)->orderBy('id', 'asc')->get();
 
         if (!Tools::is_protocol_relay($user)) {
@@ -598,8 +650,9 @@ class UserController extends BaseController
         }
 
         $node_prefix=array();
+		$node_flag_file=array();
         $node_method=array();
-        $a=0;
+        $a=0;//命名的什么JB变量
         $node_order=array();
         $node_alive=array();
         $node_prealive=array();
@@ -610,7 +663,7 @@ class UserController extends BaseController
         $node_class=array();
         $node_latestload=array();
 
-            $ports_count = Node::where('type', 1)->where('sort', 9)->orderBy('name')->count();
+        $ports_count = Node::where('type', 1)->where('sort', 9)->orderBy('name')->count();
 
 
         $ports_count += 1;
@@ -625,78 +678,83 @@ class UserController extends BaseController
                 }
 
                 $temp=explode(" - ", $node->name);
+				$name_cheif=$temp[0];
 
-                $node_isv6[$temp[0]]=$node->isv6;
-                $node_class[$temp[0]]=$node->node_class;
+                $node_isv6[$name_cheif]=$node->isv6;
+                $node_class[$name_cheif]=$node->node_class;
 
-
-                if (!isset($node_prefix[$temp[0]])) {
-                    $node_prefix[$temp[0]]=array();
-                    $node_order[$temp[0]]=$a;
-                    $node_alive[$temp[0]]=0;
+                if (!isset($node_prefix[$name_cheif])) {
+                    $node_prefix[$name_cheif]=array();
+                    $node_order[$name_cheif]=$a;
+                    $node_alive[$name_cheif]=0;
 
                     if (isset($temp[1])) {
-                        $node_method[$temp[0]]=$temp[1];
+                        $node_method[$name_cheif]=$temp[1];
                     } else {
-                        $node_method[$temp[0]]="";
+                        $node_method[$name_cheif]="";
                     }
 
                     $a++;
                 }
 
 
-                if ($node->sort==0||$node->sort==7||$node->sort==8||$node->sort==10) {
+                if ($node->sort==0||$node->sort==7||$node->sort==8||$node->sort==10||$node->sort==11) {
                     $node_tempalive=$node->getOnlineUserCount();
                     $node_prealive[$node->id]=$node_tempalive;
                     if ($node->isNodeOnline() !== null) {
                         if ($node->isNodeOnline() === false) {
-                            $node_heartbeat[$temp[0]]="离线";
+                            $node_heartbeat[$name_cheif]="离线";
                         } else {
-                            $node_heartbeat[$temp[0]]="在线";
+                            $node_heartbeat[$name_cheif]="在线";
                         }
                     } else {
-                        if (!isset($node_heartbeat[$temp[0]])) {
-                            $node_heartbeat[$temp[0]]="暂无数据";
+                        if (!isset($node_heartbeat[$name_cheif])) {
+                            $node_heartbeat[$name_cheif]="暂无数据";
                         }
                     }
 
                     if ($node->node_bandwidth_limit==0) {
-                        $node_bandwidth[$temp[0]]=(int)($node->node_bandwidth/1024/1024/1024)." GB 已用";
+                        $node_bandwidth[$name_cheif]=(int)($node->node_bandwidth/1024/1024/1024)." GB 已用";
                     } else {
-                        $node_bandwidth[$temp[0]]=(int)($node->node_bandwidth/1024/1024/1024)." GB / ".(int)($node->node_bandwidth_limit/1024/1024/1024)." GB - ".$node->bandwidthlimit_resetday." 日重置";
+                        $node_bandwidth[$name_cheif]=(int)($node->node_bandwidth/1024/1024/1024)." GB / ".(int)($node->node_bandwidth_limit/1024/1024/1024)." GB - ".$node->bandwidthlimit_resetday." 日重置";
                     }
 
                     if ($node_tempalive!="暂无数据") {
-                        $node_alive[$temp[0]]=$node_alive[$temp[0]]+$node_tempalive;
+                        $node_alive[$name_cheif]=$node_alive[$name_cheif]+$node_tempalive;
                     }
                 } else {
                     $node_prealive[$node->id]="暂无数据";
                     if (!isset($node_heartbeat[$temp[0]])) {
-                        $node_heartbeat[$temp[0]]="暂无数据";
+                        $node_heartbeat[$name_cheif]="暂无数据";
                     }
                 }
 
                 if (isset($temp[1])) {
-                    if (strpos($node_method[$temp[0]], $temp[1])===false) {
-                        $node_method[$temp[0]]=$node_method[$temp[0]]." ".$temp[1];
+                    if (strpos($node_method[$name_cheif], $temp[1])===false) {
+                        $node_method[$name_cheif]=$node_method[$name_cheif]." ".$temp[1];
                     }
                 }
 
-                if ($node_loadtemp=$node->getNodeLoad()[0]['load']){
-                    $node_latestload[$temp[0]]=((float)explode(" ", $node_loadtemp)[0])*100;
+                $nodeLoad = $node->getNodeLoad();
+                if (isset($nodeLoad[0]['load'])){
+                    $node_latestload[$name_cheif]=((float)(explode(" ",$nodeLoad[0]['load']))[0])*100;
                 } else {
-                    $node_latestload[$temp[0]]=null;
+                    $node_latestload[$name_cheif]=null;
                 }
 
+                array_push($node_prefix[$name_cheif], $node);
 
-
-                array_push($node_prefix[$temp[0]], $node);
+				$regex=Config::get('flag_regex');
+				$matches=array();
+				preg_match($regex,$name_cheif,$matches);
+				$node_flag_file[$name_cheif]=$matches[0];
+				
             }
         }
         $node_prefix=(object)$node_prefix;
         $node_order=(object)$node_order;
         $tools = new Tools();
-        return $this->view()->assign('relay_rules', $relay_rules)->assign('node_class', $node_class)->assign('node_isv6', $node_isv6)->assign('tools', $tools)->assign('node_method', $node_method)->assign('node_muport', $node_muport)->assign('node_bandwidth', $node_bandwidth)->assign('node_heartbeat', $node_heartbeat)->assign('node_prefix', $node_prefix)->assign('node_prealive', $node_prealive)->assign('node_order', $node_order)->assign('user', $user)->assign('node_alive', $node_alive)->assign('node_latestload', $node_latestload)->display('user/node.tpl');
+        return $this->view()->assign('relay_rules', $relay_rules)->assign('node_class', $node_class)->assign('node_isv6', $node_isv6)->assign('tools', $tools)->assign('node_method', $node_method)->assign('node_muport', $node_muport)->assign('node_bandwidth', $node_bandwidth)->assign('node_heartbeat', $node_heartbeat)->assign('node_prefix', $node_prefix)->assign('node_flag_file', $node_flag_file)->assign('node_prealive', $node_prealive)->assign('node_order', $node_order)->assign('user', $user)->assign('node_alive', $node_alive)->assign('node_latestload', $node_latestload)->registerClass("URL", "App\Utils\URL")->display('user/node.tpl');
     }
 
 
@@ -995,10 +1053,9 @@ class UserController extends BaseController
         $paybacks->setPath('/user/invite');
 
             return $this->view()->assign('code', $code)->assign('paybacks', $paybacks)->assign('paybacks_sum', $paybacks_sum)->display('user/invite.tpl');
-
-
     }
 
+	//此函数已废弃
     public function doInvite($request, $response, $args)
     {
         $n = $this->user->invite_num;
@@ -1020,6 +1077,34 @@ class UserController extends BaseController
         $res['msg'] = "生成成功。";
         return $this->echoJson($response, $res);
     }
+
+	public function buyInvite($request, $response, $args)
+	{
+	    $price=Config::get('invite_price');
+		$num=$request->getParam('num');
+		$num=trim($num);
+
+		if(Tools::isInt($num)==false||$price<0||$num<=0){
+		    $res['ret'] = 0;
+            $res['msg'] = "非法请求";
+            return $response->getBody()->write(json_encode($res));
+		}
+
+		$amount=$price*$num;
+
+		$user=$this->user;
+        if ($user->money<$amount) {
+            $res['ret'] = 0;
+            $res['msg'] = "余额不足，总价为".$amount."元。";
+            return $response->getBody()->write(json_encode($res));
+        }
+		$user->invite_num += $num;
+		$user->money-=$amount;
+		$user->save();
+        $res['ret'] = 1;
+        $res['msg'] = "邀请次数添加成功。";  
+		return $response->getBody()->write(json_encode($res));
+	}
 
     public function sys()
     {
@@ -1087,7 +1172,7 @@ class UserController extends BaseController
 
 
         $res['ret'] = 1;
-        $res['msg'] = "发送解封命令解封 ".$_SERVER["REMOTE_ADDR"]." 成功";
+        $res['msg'] = $_SERVER["REMOTE_ADDR"];
         return $this->echoJson($response, $res);
     }
 
@@ -1106,6 +1191,8 @@ class UserController extends BaseController
     public function CouponCheck($request, $response, $args)
     {
         $coupon = $request->getParam('coupon');
+		$coupon = trim($coupon);
+
         $shop = $request->getParam('shop');
 
         $shop=Shop::where("id", $shop)->where("status", 1)->first();
@@ -1149,6 +1236,7 @@ class UserController extends BaseController
     public function buy($request, $response, $args)
     {
         $coupon = $request->getParam('coupon');
+		$coupon = trim($coupon);
         $code = $coupon;
         $shop = $request->getParam('shop');
 
@@ -1193,7 +1281,7 @@ class UserController extends BaseController
         $price=$shop->price*((100-$credit)/100);
         $user=$this->user;
 
-        if ((float)$user->money<(float)$price) {
+        if ($user->money<$price) {
             $res['ret'] = 0;
             $res['msg'] = "余额不足，总价为".$price."元。";
             return $response->getBody()->write(json_encode($res));
@@ -1269,6 +1357,9 @@ class UserController extends BaseController
 
     public function ticket($request, $response, $args)
     {
+		if (Config::get('enable_ticket') != 'true') {
+            exit(0);
+        }
         $pageNum = 1;
         if (isset($request->getQueryParams()["page"])) {
             $pageNum = $request->getQueryParams()["page"];
@@ -1439,6 +1530,7 @@ class UserController extends BaseController
     {
         $type = $request->getParam('imtype');
         $wechat = $request->getParam('wechat');
+		$wechat = trim($wechat);
 
         $user = $this->user;
 
@@ -1476,6 +1568,8 @@ class UserController extends BaseController
     {
         $protocol = $request->getParam('protocol');
         $obfs = $request->getParam('obfs');
+		$obfs_param = $request->getParam('obfs_param');
+		$obfs_param = trim($obfs_param);
 
         $user = $this->user;
 
@@ -1501,7 +1595,7 @@ class UserController extends BaseController
 
         $user->protocol = $antiXss->xss_clean($protocol);
         $user->obfs = $antiXss->xss_clean($obfs);
-
+		$user->obfs_param = $antiXss->xss_clean($obfs_param);
 
         if (!Tools::checkNoneProtocol($user)) {
             $res['ret'] = 0;
@@ -1559,7 +1653,7 @@ class UserController extends BaseController
     public function updateMail($request, $response, $args)
     {
         $mail = $request->getParam('mail');
-
+		$mail = trim($mail);
         $user = $this->user;
 
         if (!($mail == "1"||$mail == "0")) {
@@ -1603,6 +1697,7 @@ class UserController extends BaseController
     {
         $user = Auth::getUser();
         $pwd = $request->getParam('sspwd');
+		$pwd= trim($pwd);
 
         if ($pwd == "") {
             $res['ret'] = 0;
@@ -1706,7 +1801,7 @@ class UserController extends BaseController
         $this->user->transfer_enable = $this->user->transfer_enable + Tools::toMB($traffic);
         $this->user->last_check_in_time = time();
         $this->user->save();
-        $res['msg'] = sprintf("获得了 %u MB流量.", $traffic);
+        $res['msg'] = sprintf("获得了 %d MB流量.", $traffic);
         $res['ret'] = 1;
         return $this->echoJson($response, $res);
     }
@@ -1731,7 +1826,7 @@ class UserController extends BaseController
             return $this->echoJson($response, $res);
         }
 
-    if ((float)$user->money > '1') {
+    if ($user->money > 1) {
         $res['ret'] = 0;
         $res['msg'] = "不可删除,您当前的余额 [".$user->money."]元 大于 [1.00]元.";
      } else {
@@ -1804,6 +1899,47 @@ class UserController extends BaseController
         $user = $this->user;
         $user->clean_link();
         $newResponse = $response->withStatus(302)->withHeader('Location', '/user');
+        return $newResponse;
+    }
+	
+    public function backtoadmin($request, $response, $args)
+    {
+        $userid = Utils\Cookie::get('uid');
+        $adminid = Utils\Cookie::get('old_uid');
+        $user = User::find($userid);
+        $admin = User::find($adminid);
+      
+        if (!$admin->is_admin || !$user) {
+            Utils\Cookie::set([
+            "uid" => null,
+            "email" => null,
+            "key" =>null,
+            "ip" => null,
+            "expire_in" =>  null,
+            "old_uid" => null,
+            "old_email" => null,
+            "old_key" => null,
+            "old_ip" => null,
+            "old_expire_in" => null,
+            "old_local" =>  null
+        ], time() - 1000);
+        }
+        $expire_in = Utils\Cookie::get('old_expire_in');
+        $local = Utils\Cookie::get('old_local');
+        Utils\Cookie::set([
+            "uid" => Utils\Cookie::get('old_uid'),
+            "email" => Utils\Cookie::get('old_email'),
+            "key" => Utils\Cookie::get('old_key'),
+            "ip" => Utils\Cookie::get('old_expire_in'),
+            "expire_in" =>  $expire_in,
+            "old_uid" => null,
+            "old_email" => null,
+            "old_key" => null,
+            "old_ip" => null,
+            "old_expire_in" => null,
+            "old_local" =>  null
+        ],  $expire_in);
+        $newResponse = $response->withStatus(302)->withHeader('Location', $local);
         return $newResponse;
     }
 }

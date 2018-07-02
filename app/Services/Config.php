@@ -22,10 +22,15 @@ class Config
             "appName" => self::get("appName"),
             "version" => VERSION,
             "baseUrl" => self::get("baseUrl"),
+			"min_port" => self::get("min_port"),
+			"max_port" => self::get("max_port"),
+			"invite_price"=>self::get("invite_price"),
             "checkinMin" => self::get("checkinMin"),
-            "code_payback" => self::get("code_payback"),
             "checkinMax" => self::get("checkinMax"),
+            "code_payback" => self::get("code_payback"),
             "wecenter_url" => self::get("wecenter_url"),
+			"port_price" => self::get("port_price"),
+			"port_price_specify" => self::get("port_price_specify"),
             "enable_wecenter" => self::get("enable_wecenter"),
             "jump_delay" => self::get("jump_delay"),
             "enable_analytics_code" => self::get("enable_analytics_code"),
@@ -33,7 +38,13 @@ class Config
             "enable_telegram" => self::get("enable_telegram"),
             "payment_system" => self::get("payment_system"),
           	"enable_crisp" => self::get("enable_crisp"),
-          	"crisp_id" => self::get("crisp_id")
+          	"crisp_id" => self::get("crisp_id"),
+          	"enable_ticket"=> self::get("enable_ticket"),
+			"enable_admin_contact" => self::get("enable_admin_contact"),
+			"admin_contact1" => self::get("admin_contact1"),
+			"admin_contact2" => self::get("admin_contact2"),
+			"admin_contact3" => self::get("admin_contact3"),
+			"enable_flag" => self::get("enable_flag")
          ];
     }
 

@@ -11,15 +11,12 @@
 
 
 	<!-- css -->
-	<link href="https://cdn.jsdelivr.net/gh/sspuic/p@0x01/public/theme/material/css/base.min.css" rel="stylesheet">
-	<link href="https://cdn.jsdelivr.net/gh/sspuic/p@0x01/public/theme/material/css/project.css" rel="stylesheet">
-	<link href="https://cdn.jsdelivr.net/gh/sspuic/p@0x01/public/theme/material/css/icon.css" rel="stylesheet">
-	<link href="https://cdn.jsdelivr.net/gh/sspuic/p@0x01/public/theme/material/css/material.min.css" rel="stylesheet">
-	<link href="https://cdn.jsdelivr.net/gh/sspuic/p@0x01/public/theme/material/css/dataTables.material.min.css" rel="stylesheet">
-
-	<link href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css" rel="stylesheet">
-	<link href="https://cdn.datatables.net/1.10.16/css/dataTables.jqueryui.min.css" rel="stylesheet">
-	<link href="https://cdn.datatables.net/responsive/2.2.1/css/responsive.jqueryui.min.css" rel="stylesheet">
+	<link href="/theme/material/css/base.min.css" rel="stylesheet">
+	<link href="/theme/material/css/project.css" rel="stylesheet">
+	<link href="https://fonts.loli.net/css?family=Roboto:300,300italic,400,400italic,500,500italic" rel="stylesheet">
+	<link href="https://fonts.loli.net/css?family=Material+Icons">
+	<link href="/theme/material/css/material.min.css" rel="stylesheet">
+	<link href="/theme/material/css/dataTables.material.min.css" rel="stylesheet">
 
 	<!-- favicon -->
 	<!-- ... -->
@@ -52,7 +49,7 @@
 				</ul>
 				{else}
 				<span class="access-hide">未登录</span>
-				<span class="avatar avatar-sm"><img alt="alt text for John Smith avatar" src="https://cdn.jsdelivr.net/gh/sspuic/p@0x01/public/theme/material/images/users/avatar-001.jpg"></span>
+				<span class="avatar avatar-sm"><img alt="alt text for John Smith avatar" src="/theme/material/images/users/avatar-001.jpg"></span>
 				</a>
 				<ul class="dropdown-menu dropdown-menu-right">
 					<li>
